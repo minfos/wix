@@ -21,6 +21,8 @@ namespace WixToolset.Firewall
                 new IntermediateFieldDefinition(nameof(WixFirewallExceptionSymbolFields.ComponentRef), IntermediateFieldType.String),
                 new IntermediateFieldDefinition(nameof(WixFirewallExceptionSymbolFields.Description), IntermediateFieldType.String),
                 new IntermediateFieldDefinition(nameof(WixFirewallExceptionSymbolFields.Direction), IntermediateFieldType.Number),
+                new IntermediateFieldDefinition(nameof(WixFirewallExceptionSymbolFields.Service), IntermediateFieldType.String),
+                new IntermediateFieldDefinition(nameof(WixFirewallExceptionSymbolFields.InterfaceTypes), IntermediateFieldType.String),
             },
             typeof(WixFirewallExceptionSymbol));
     }
@@ -42,6 +44,8 @@ namespace WixToolset.Firewall.Symbols
         ComponentRef,
         Description,
         Direction,
+        Service,
+        InterfaceTypes
     }
 
     public class WixFirewallExceptionSymbol : IntermediateSymbol
@@ -114,6 +118,18 @@ namespace WixToolset.Firewall.Symbols
         {
             get => this.Fields[(int)WixFirewallExceptionSymbolFields.Direction].AsNumber();
             set => this.Set((int)WixFirewallExceptionSymbolFields.Direction, value);
+        }
+
+        public string Service
+        {
+            get => this.Fields[(int)WixFirewallExceptionSymbolFields.Service].AsString();
+            set => this.Set((int)WixFirewallExceptionSymbolFields.Service, value);
+        }
+
+        public string InterfaceTypes
+        {
+            get => this.Fields[(int)WixFirewallExceptionSymbolFields.InterfaceTypes].AsString();
+            set => this.Set((int)WixFirewallExceptionSymbolFields.InterfaceTypes, value);
         }
     }
 }

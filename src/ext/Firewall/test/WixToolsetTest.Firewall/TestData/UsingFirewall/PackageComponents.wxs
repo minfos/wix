@@ -1,18 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall">
+     xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
     <Fragment>
         <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
             <Component>
                 <File Name="fw.exe" Source="example.txt">
                     <Shortcut Id="FwShortcut" Directory="INSTALLFOLDER" Name="Firewall" />
-                    <fw:FirewallException Id="ExampleFirewall" Description="An app-based firewall exception" Name="ExampleApp" Port="42">
+                    <fw:FirewallException Id="ExampleFirewall" Description="An app-based firewall exception" Name="ExampleApp" Port="42" InterfaceTypes="2147483647">
                         <fw:RemoteAddress Value="*" />
                     </fw:FirewallException>
                 </File>
 
-                <fw:FirewallException Description="A port-based firewall exception" Name="ExamplePort" Port="42" Outbound="yes" Scope="localSubnet" />
+                <fw:FirewallException Description="A port-based firewall exception" Name="ExamplePort" Port="42" Outbound="yes" Scope="localSubnet" Service="ftpsrv" IgnoreFailure="yes" InterfaceTypes="2"/>
+
+                <ServiceInstall Name="svc1" Type="ownProcess" Start="disabled" ErrorControl="ignore" >
+                    <fw:FirewallException Id="ServiceInstall.nested" EdgeTraversal="false" IgnoreFailure="true" Description="A port-based firewall exception for a windows service" Name="ExamplePort" Port="3546-7890" Outbound="no" Scope="localSubnet" InterfaceTypes="7"/>
+                </ServiceInstall>
             </Component>
+            <!--<Component Id="nokeypath" Guid="{4EE928B9-CF3E-467D-974E-C03A6BF448A0}" >
+                <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="reboot" >
+                    <fw:FirewallException Name="FTP Server" Description="An inbound rule [TCP 21]" Port="21" />
+                </util:ServiceConfig>
+                <File Name="fw2.exe" Source="example.txt" KeyPath="yes"/>
+            </Component>-->
         </ComponentGroup>
     </Fragment>
 </Wix>

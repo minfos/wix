@@ -2,54 +2,53 @@
 
 namespace WixToolset.Firewall
 {
-#if TODO_CONSIDER_DECOMPILER
     using System;
-    using System.Collections;
-    using System.Diagnostics;
-    using System.Globalization;
+    using System.Collections.Generic;
+    using System.Xml.Linq;
     using WixToolset.Data;
+    using WixToolset.Data.WindowsInstaller;
     using WixToolset.Extensibility;
-    using Firewall = WixToolset.Extensions.Serialize.Firewall;
-    using Wix = WixToolset.Data.Serialize;
 
     /// <summary>
     /// The decompiler for the WiX Toolset Firewall Extension.
     /// </summary>
-    public sealed class FirewallDecompiler : DecompilerExtension
+    public sealed class FirewallDecompiler : BaseWindowsInstallerDecompilerExtension
     {
-        /// <summary>
-        /// Creates a decompiler for Firewall Extension.
-        /// </summary>
-        public FirewallDecompiler()
-        {
-            this.TableDefinitions = FirewallExtensionData.GetExtensionTableDefinitions();
-        }
+        public override IReadOnlyCollection<TableDefinition> TableDefinitions => FirewallTableDefinitions.All;
 
         /// <summary>
-        /// Get the extensions library to be removed.
+        /// Called at the beginning of the decompilation of a database.
         /// </summary>
-        /// <param name="tableDefinitions">Table definitions for library.</param>
-        /// <returns>Library to remove from decompiled output.</returns>
-        public override Library GetLibraryToRemove(TableDefinitionCollection tableDefinitions)
+        /// <param name="tables">The collection of all tables.</param>
+        public override void PreDecompileTables(TableIndexedCollection tables)
         {
-            return FirewallExtensionData.GetExtensionLibrary(tableDefinitions);
         }
 
         /// <summary>
         /// Decompiles an extension table.
         /// </summary>
         /// <param name="table">The table to decompile.</param>
-        public override void DecompileTable(Table table)
+        public override bool TryDecompileTable(Table table)
         {
             switch (table.Name)
             {
-                case "WixFirewallException":
+                case "Wix4FirewallException":
                     this.DecompileWixFirewallExceptionTable(table);
                     break;
                 default:
-                    base.DecompileTable(table);
-                    break;
+                    return false;
             }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Finalize decompilation.
+        /// </summary>
+        /// <param name="tables">The collection of all tables.</param>
+        public override void PostDecompileTables(TableIndexedCollection tables)
+        {
+            this.FinalizeFirewallExceptionTable(tables);
         }
 
         /// <summary>
@@ -60,9 +59,10 @@ namespace WixToolset.Firewall
         {
             foreach (Row row in table.Rows)
             {
-                Firewall.FirewallException fire = new Firewall.FirewallException();
-                fire.Id = (string)row[0];
-                fire.Name = (string)row[1];
+                var firewallException = new XElement(FirewallConstants.FirewallExceptionName,
+                    new XAttribute("Id", row.FieldAsString(0)),
+                    new XAttribute("Name", row.FieldAsString(1))
+                );
 
                 string[] addresses = ((string)row[2]).Split(',');
                 if (1 == addresses.Length)
@@ -70,28 +70,28 @@ namespace WixToolset.Firewall
                     // special-case the Scope attribute values
                     if ("*" == addresses[0])
                     {
-                        fire.Scope = Firewall.FirewallException.ScopeType.any;
+                        firewallException.Add(new XAttribute("Scope", "any"));
                     }
                     else if ("LocalSubnet" == addresses[0])
                     {
-                        fire.Scope = Firewall.FirewallException.ScopeType.localSubnet;
+                        firewallException.Add(new XAttribute("Scope", "localSubnet"));
                     }
                     else
                     {
-                        FirewallDecompiler.AddRemoteAddress(fire, addresses[0]);
+                        FirewallDecompiler.AddRemoteAddress(firewallException, addresses[0]);
                     }
                 }
                 else
                 {
                     foreach (string address in addresses)
                     {
-                        FirewallDecompiler.AddRemoteAddress(fire, address);
+                        FirewallDecompiler.AddRemoteAddress(firewallException, address);
                     }
                 }
 
                 if (!row.IsColumnEmpty(3))
                 {
-                    fire.Port = (string)row[3];
+                    firewallException.Add(new XAttribute("Port", row.FieldAsString(3)));
                 }
 
                 if (!row.IsColumnEmpty(4))
@@ -99,25 +99,28 @@ namespace WixToolset.Firewall
                     switch (Convert.ToInt32(row[4]))
                     {
                         case FirewallConstants.NET_FW_IP_PROTOCOL_TCP:
-                            fire.Protocol = Firewall.FirewallException.ProtocolType.tcp;
+                            firewallException.Add(new XAttribute("Protocol", "tcp"));
                             break;
                         case FirewallConstants.NET_FW_IP_PROTOCOL_UDP:
-                            fire.Protocol = Firewall.FirewallException.ProtocolType.udp;
+                            firewallException.Add(new XAttribute("Protocol", "udp"));
                             break;
                     }
                 }
 
                 if (!row.IsColumnEmpty(5))
                 {
-                    fire.Program = (string)row[5];
+                    firewallException.Add(new XAttribute("Program", row.FieldAsString(5)));
                 }
 
                 if (!row.IsColumnEmpty(6))
                 {
-                    int attr = Convert.ToInt32(row[6]);
-                    if (0x1 == (attr & 0x1)) // feaIgnoreFailures
+                    var attr = Convert.ToInt32(row[6]);
+                    AttributeIfNotNull("IgnoreFailure", 0x1 == (attr & 0x1));
+
+                    // default value is true
+                    if (0x2 != (attr & 0x2))
                     {
-                        fire.IgnoreFailure = Firewall.YesNoType.yes;
+                        AttributeIfNotNull("EdgeTraversal", false);
                     }
                 }
 
@@ -126,24 +129,23 @@ namespace WixToolset.Firewall
                     switch (Convert.ToInt32(row[7]))
                     {
                         case FirewallConstants.NET_FW_PROFILE2_DOMAIN:
-                            fire.Profile = Firewall.FirewallException.ProfileType.domain;
+                            firewallException.Add(new XAttribute("Profile", "domain"));
                             break;
                         case FirewallConstants.NET_FW_PROFILE2_PRIVATE:
-                            fire.Profile = Firewall.FirewallException.ProfileType.@private;
+                            firewallException.Add(new XAttribute("Profile", "private"));
                             break;
                         case FirewallConstants.NET_FW_PROFILE2_PUBLIC:
-                            fire.Profile = Firewall.FirewallException.ProfileType.@public;
+                            firewallException.Add(new XAttribute("Profile", "public"));
                             break;
                         case FirewallConstants.NET_FW_PROFILE2_ALL:
-                            fire.Profile = Firewall.FirewallException.ProfileType.all;
+                            firewallException.Add(new XAttribute("Profile", "all"));
                             break;
                     }
                 }
 
-                // Description column is new in v3.6
-                if (9 < row.Fields.Length && !row.IsColumnEmpty(9))
+                if (!row.IsColumnEmpty(9))
                 {
-                    fire.Description = (string)row[9];
+                    firewallException.Add(new XAttribute("Description", row.FieldAsString(9)));
                 }
 
                 if (!row.IsColumnEmpty(10))
@@ -151,32 +153,91 @@ namespace WixToolset.Firewall
                     switch (Convert.ToInt32(row[10]))
                     {
                         case FirewallConstants.NET_FW_RULE_DIR_IN:
-                            fire.Direction = Firewall.FirewallException.DirectionType.@in;
+
+                            firewallException.Add(AttributeIfNotNull("Outbound", false));
                             break;
                         case FirewallConstants.NET_FW_RULE_DIR_OUT:
-                            fire.Direction = Firewall.FirewallException.DirectionType.@out;
+                            firewallException.Add(AttributeIfNotNull("Outbound", true));
                             break;
                     }
                 }
 
-                Wix.Component component = (Wix.Component)this.Core.GetIndexedElement("Component", (string)row[8]);
-                if (null != component)
+                // Introduced after 4.0.1
+                if (row.Fields.Length > 11 && !row.IsColumnEmpty(11))
                 {
-                    component.AddChild(fire);
+                    firewallException.Add(new XAttribute("Service", row.FieldAsString(11)));
                 }
-                else
+
+                if (row.Fields.Length > 12 && !row.IsColumnEmpty(12))
                 {
-                    this.Core.OnMessage(WixWarnings.ExpectedForeignRow(row.SourceLineNumbers, table.Name, row.GetPrimaryKey(DecompilerConstants.PrimaryKeyDelimiter), "Component_", (string)row[6], "Component"));
+                    var interfaceTypes = row.FieldAsString(12);
+                    var interfaceTypesValue = 0;
+                    if ("All" == interfaceTypes)
+                    {
+                        interfaceTypesValue = Int32.MaxValue;
+                    }
+                    else
+                    {
+                        if (interfaceTypes.Contains("Wireless"))
+                        {
+                            interfaceTypesValue |= 0x1;
+                        }
+
+                        if (interfaceTypes.Contains("Lan"))
+                        {
+                            interfaceTypesValue |= 0x2;
+                        }
+
+                        if (interfaceTypes.Contains("RemoteAccess"))
+                        {
+                            interfaceTypesValue |= 0x4;
+                        }
+                    }
+
+                    firewallException.Add(new XAttribute("InterfaceTypes", interfaceTypesValue));
                 }
+
+                this.DecompilerHelper.IndexElement(row, firewallException);
             }
         }
 
-        private static void AddRemoteAddress(Firewall.FirewallException fire, string address)
+        private static void AddRemoteAddress(XElement firewallException, string address)
         {
-            Firewall.RemoteAddress remote = new Firewall.RemoteAddress();
-            remote.Content = address;
-            fire.AddChild(remote);
+            var remoteAddress = new XElement(FirewallConstants.RemoteAddressName,
+                new XAttribute("Value", address)
+            );
+
+            firewallException.AddAfterSelf(remoteAddress);
+        }
+
+        private static XAttribute AttributeIfNotNull(string name, bool value)
+        {
+            return new XAttribute(name, value ? "yes" : "no");
+        }
+
+        /// <summary>
+        /// Finalize the FirewallException table.
+        /// </summary>
+        /// <param name="tables">Collection of all tables.</param>
+        private void FinalizeFirewallExceptionTable(TableIndexedCollection tables)
+        {
+            if (tables.TryGetTable("Wix4FirewallException", out var firewallExceptionTable))
+            {
+                foreach (var row in firewallExceptionTable.Rows)
+                {
+                    var xmlConfig = this.DecompilerHelper.GetIndexedElement(row);
+
+                    var componentId = row.FieldAsString(8);
+                    if (this.DecompilerHelper.TryGetIndexedElement("Component", componentId, out var component))
+                    {
+                        component.Add(xmlConfig);
+                    }
+                    else
+                    {
+                        this.Messaging.Write(WarningMessages.ExpectedForeignRow(row.SourceLineNumbers, firewallExceptionTable.Name, row.GetPrimaryKey(), "Component_", componentId, "Component"));
+                    }
+                }
+            }
         }
     }
-#endif
 }

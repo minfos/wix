@@ -15,7 +15,7 @@ namespace WixToolset.Firewall
     /// </summary>
     public sealed class FirewallCompiler : BaseCompilerExtension
     {
-        public override XNamespace Namespace => "http://wixtoolset.org/schemas/v4/wxs/firewall";
+        public override XNamespace Namespace => FirewallConstants.Namespace;
 
         /// <summary>
         /// Processes an element for the Compiler.
@@ -35,7 +35,7 @@ namespace WixToolset.Firewall
                     switch (element.Name.LocalName)
                     {
                         case "FirewallException":
-                            this.ParseFirewallExceptionElement(intermediate, section, element, fileComponentId, fileId);
+                            this.ParseFirewallExceptionElement(intermediate, section, parentElement, element, fileComponentId, fileId, null);
                             break;
                         default:
                             this.ParseHelper.UnexpectedElement(parentElement, element);
@@ -48,7 +48,35 @@ namespace WixToolset.Firewall
                     switch (element.Name.LocalName)
                     {
                         case "FirewallException":
-                            this.ParseFirewallExceptionElement(intermediate, section, element, componentId, null);
+                            this.ParseFirewallExceptionElement(intermediate, section, parentElement, element, componentId, null, null);
+                            break;
+                        default:
+                            this.ParseHelper.UnexpectedElement(parentElement, element);
+                            break;
+                    }
+                    break;
+                case "ServiceConfig":
+                    var serviceConfigName = context["ServiceConfigServiceName"];
+                    var serviceConfigComponentId = context["ServiceConfigComponentId"];
+
+                    switch (element.Name.LocalName)
+                    {
+                        case "FirewallException":
+                            this.ParseFirewallExceptionElement(intermediate, section, parentElement, element, serviceConfigComponentId, null, serviceConfigName);
+                            break;
+                        default:
+                            this.ParseHelper.UnexpectedElement(parentElement, element);
+                            break;
+                    }
+                    break;
+                case "ServiceInstall":
+                    var serviceInstallName = context["ServiceInstallName"];
+                    var serviceInstallComponentId = context["ServiceInstallComponentId"];
+
+                    switch (element.Name.LocalName)
+                    {
+                        case "FirewallException":
+                            this.ParseFirewallExceptionElement(intermediate, section, parentElement, element, serviceInstallComponentId, null, serviceInstallName);
                             break;
                         default:
                             this.ParseHelper.UnexpectedElement(parentElement, element);
@@ -64,17 +92,20 @@ namespace WixToolset.Firewall
         /// <summary>
         /// Parses a FirewallException element.
         /// </summary>
+        /// <param name="parentElement">The parent element of the one being parsed.</param>
         /// <param name="element">The element to parse.</param>
         /// <param name="componentId">Identifier of the component that owns this firewall exception.</param>
         /// <param name="fileId">The file identifier of the parent element (null if nested under Component).</param>
-        private void ParseFirewallExceptionElement(Intermediate intermediate, IntermediateSection section, XElement element, string componentId, string fileId)
+        /// <param name="serviceName">The service name of the parent element (null if not nested under ServiceConfig or ServiceInstall).</param>
+        private void ParseFirewallExceptionElement(Intermediate intermediate, IntermediateSection section, XElement parentElement, XElement element, string componentId, string fileId, string serviceName)
         {
             var sourceLineNumbers = this.ParseHelper.GetSourceLineNumbers(element);
             Identifier id = null;
             string name = null;
-            int attributes = 0;
+            int attributes = 0x2; // set feaEdgeTraversal on by default
             string file = null;
             string program = null;
+            string service = null;
             string port = null;
             int? protocol = null;
             int? profile = null;
@@ -82,6 +113,7 @@ namespace WixToolset.Firewall
             string remoteAddresses = null;
             string description = null;
             int? direction = null;
+            string interfaceTypes = null;
 
             foreach (var attrib in element.Attributes())
             {
@@ -98,7 +130,7 @@ namespace WixToolset.Firewall
                         case "File":
                             if (null != fileId)
                             {
-                                this.Messaging.Write(ErrorMessages.IllegalAttributeWhenNested(sourceLineNumbers, element.Name.LocalName, "File", "File"));
+                                this.Messaging.Write(ErrorMessages.IllegalAttributeWhenNested(sourceLineNumbers, element.Name.LocalName, "File", parentElement.Name.LocalName));
                             }
                             else
                             {
@@ -111,14 +143,30 @@ namespace WixToolset.Firewall
                                 attributes |= 0x1; // feaIgnoreFailures
                             }
                             break;
+                        case "EdgeTraversal":
+                            if (YesNoType.No == this.ParseHelper.GetAttributeYesNoValue(sourceLineNumbers, attrib))
+                            {
+                                attributes &= ~0x2; // remove feaEdgeTraversal
+                            }
+                            break;
                         case "Program":
                             if (null != fileId)
                             {
-                                this.Messaging.Write(ErrorMessages.IllegalAttributeWhenNested(sourceLineNumbers, element.Name.LocalName, "Program", "File"));
+                                this.Messaging.Write(ErrorMessages.IllegalAttributeWhenNested(sourceLineNumbers, element.Name.LocalName, "Program", parentElement.Name.LocalName));
                             }
                             else
                             {
                                 program = this.ParseHelper.GetAttributeValue(sourceLineNumbers, attrib);
+                            }
+                            break;
+                        case "Service":
+                            if (null != serviceName)
+                            {
+                                this.Messaging.Write(ErrorMessages.IllegalAttributeWhenNested(sourceLineNumbers, element.Name.LocalName, "Service", parentElement.Name.LocalName));
+                            }
+                            else
+                            {
+                                service = this.ParseHelper.GetAttributeValue(sourceLineNumbers, attrib);
                             }
                             break;
                         case "Port":
@@ -153,6 +201,9 @@ namespace WixToolset.Firewall
                                     this.Messaging.Write(ErrorMessages.IllegalAttributeValue(sourceLineNumbers, element.Name.LocalName, "Scope", scope, "any", "localSubnet"));
                                     break;
                             }
+                            break;
+                        case "InterfaceTypes":
+                            this.ParseInterfaceTypesElement(element, attrib, ref interfaceTypes);
                             break;
                         case "Profile":
                             var profileValue = this.ParseHelper.GetAttributeValue(sourceLineNumbers, attrib);
@@ -227,6 +278,11 @@ namespace WixToolset.Firewall
                 id = this.ParseHelper.CreateIdentifier("fex", name, remoteAddresses, componentId);
             }
 
+            if (null == service)
+            {
+                service = serviceName;
+            }
+
             // Name is required
             if (null == name)
             {
@@ -267,6 +323,8 @@ namespace WixToolset.Firewall
                     ComponentRef = componentId,
                     Description = description,
                     Direction = direction ?? FirewallConstants.NET_FW_RULE_DIR_IN,
+                    Service = service,
+                    InterfaceTypes = interfaceTypes,
                 });
 
                 if (!String.IsNullOrEmpty(port))
@@ -302,6 +360,53 @@ namespace WixToolset.Firewall
 
                 this.ParseHelper.CreateCustomActionReference(sourceLineNumbers, section, "Wix4SchedFirewallExceptionsInstall", this.Context.Platform, CustomActionPlatforms.ARM64 | CustomActionPlatforms.X64 | CustomActionPlatforms.X86);
                 this.ParseHelper.CreateCustomActionReference(sourceLineNumbers, section, "Wix4SchedFirewallExceptionsUninstall", this.Context.Platform, CustomActionPlatforms.ARM64 | CustomActionPlatforms.X64 | CustomActionPlatforms.X86);
+            }
+        }
+
+        /// <summary>
+        /// Parses an InterfaceTypes element
+        /// </summary>
+        /// <param name="element">The element to parse.</param>
+        /// <param name="attribute">The attribute to parse.</param>
+        private void ParseInterfaceTypesElement(XElement element, XAttribute attribute, ref string interfaceTypes)
+        {
+            var sourceLineNumbers = this.ParseHelper.GetSourceLineNumbers(element);
+            var interfaceTypeValue = this.ParseHelper.GetAttributeIntegerValue(sourceLineNumbers, attribute, 0, Int32.MaxValue);
+
+            if (Int32.MaxValue == interfaceTypeValue)
+            {
+                interfaceTypes = "All";
+            }
+            else
+            {
+                if (0x1 == (interfaceTypeValue & 0x1))
+                {
+                    interfaceTypes = "Wireless";
+                }
+
+                if (0x2 == (interfaceTypeValue & 0x2))
+                {
+                    if (String.IsNullOrEmpty(interfaceTypes))
+                    {
+                        interfaceTypes = "Lan";
+                    }
+                    else
+                    {
+                        interfaceTypes = String.Concat(interfaceTypes, ",", "Lan");
+                    }
+                }
+
+                if (0x4 == (interfaceTypeValue & 0x4))
+                {
+                    if (String.IsNullOrEmpty(interfaceTypes))
+                    {
+                        interfaceTypes = "RemoteAccess";
+                    }
+                    else
+                    {
+                        interfaceTypes = String.Concat(interfaceTypes, ",", "RemoteAccess");
+                    }
+                }
             }
         }
 
