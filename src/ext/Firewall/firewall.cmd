@@ -15,7 +15,7 @@ msbuild -Restore -p:Configuration=%_C% || exit /b
 dotnet test -c %_C% --no-build test\WixToolsetTest.Firewall || exit /b
 
 :: Pack
-msbuild -t:Pack -p:Configuration=%_C% -p:NoBuild=true wixext\WixToolset.Firewall.wixext.csproj || exit /b
+msbuild -t:Pack -p:Configuration=%_C% -p:NoBuild=true wixext\Minfos.Firewall.wixext.csproj || exit /b
 
 @popd
 @endlocal

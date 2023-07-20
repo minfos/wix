@@ -64,7 +64,7 @@ namespace WixToolsetTest.Firewall
             build.BuildAndDecompileAndBuild(Build, Decompile, output);
 
             var doc = XDocument.Load(output);
-            var firewallElementNames = doc.Descendants().Where(e => e.Name.Namespace == "http://wixtoolset.org/schemas/v4/wxs/firewall")
+            var firewallElementNames = doc.Descendants().Where(e => e.Name.Namespace == "http://minfos.com.au/schemas/v4/wxs/firewall")
                                       .Select(e => e.Name.LocalName)
                                       .ToArray();
 

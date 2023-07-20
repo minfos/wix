@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\wixext\WixToolset.Firewall.wixext.csproj" />
+    <ProjectReference Include="..\..\wixext\Minfos.Firewall.wixext.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -26,7 +26,7 @@ namespace WixToolsetTest.Converters
 
             var expected = new[]
             {
-                "<Wix xmlns=\"http://wixtoolset.org/schemas/v4/wxs\" xmlns:fw=\"http://wixtoolset.org/schemas/v4/wxs/firewall\">",
+                "<Wix xmlns=\"http://wixtoolset.org/schemas/v4/wxs\" xmlns:fw=\"http://minfos.com.au/schemas/v4/wxs/firewall\">",
                 "  <Fragment>",
                 "    <fw:RemoteAddress Value=\"127.0.0.1\" />",
                 "  </Fragment>",
@@ -59,7 +59,7 @@ namespace WixToolsetTest.Converters
 
             var expected = new[]
             {
-                "<Wix xmlns=\"http://wixtoolset.org/schemas/v4/wxs\" xmlns:fw=\"http://wixtoolset.org/schemas/v4/wxs/firewall\">",
+                "<Wix xmlns=\"http://wixtoolset.org/schemas/v4/wxs\" xmlns:fw=\"http://minfos.com.au/schemas/v4/wxs/firewall\">",
                 "  <Fragment>",
                 "    <fw:RemoteAddress Value=\"127.0.0.1\" />",
                 "  </Fragment>",
@@ -75,9 +75,9 @@ namespace WixToolsetTest.Converters
             WixAssert.CompareLineByLine(new[]
             {
                 "[Converted] The namespace 'http://schemas.microsoft.com/wix/2006/wi' is out of date. It must be 'http://wixtoolset.org/schemas/v4/wxs'. (XmlnsValueWrong)",
-                "[Converted] The namespace 'http://schemas.microsoft.com/wix/FirewallExtension' is out of date. It must be 'http://wixtoolset.org/schemas/v4/wxs/firewall'. (XmlnsValueWrong)",
+                "[Converted] The namespace 'http://schemas.microsoft.com/wix/FirewallExtension' is out of date. It must be 'http://minfos.com.au/schemas/v4/wxs/firewall'. (XmlnsValueWrong)",
                 "[Converted] Using RemoteAddress element text is deprecated. Use the 'Value' attribute instead. (InnerTextDeprecated)",
-                "[Converted] Namespace should be defined on the root. The 'http://wixtoolset.org/schemas/v4/wxs/firewall' namespace was move to the root element. (MoveNamespacesToRoot)"
+                "[Converted] Namespace should be defined on the root. The 'http://minfos.com.au/schemas/v4/wxs/firewall' namespace was move to the root element. (MoveNamespacesToRoot)"
             }, messaging.Messages.Select(m => m.ToString()).ToArray());
             Assert.Equal(4, errors);
 
@@ -100,7 +100,7 @@ namespace WixToolsetTest.Converters
 
             var expected = new[]
             {
-                "<Wix xmlns=\"http://wixtoolset.org/schemas/v4/wxs\" xmlns:fw=\"http://wixtoolset.org/schemas/v4/wxs/firewall\">",
+                "<Wix xmlns=\"http://wixtoolset.org/schemas/v4/wxs\" xmlns:fw=\"http://minfos.com.au/schemas/v4/wxs/firewall\">",
                 "  <Fragment>",
                 "    <fw:RemoteAddress Value=\"127.0.0.1\" />",
                 "  </Fragment>",
@@ -116,9 +116,9 @@ namespace WixToolsetTest.Converters
             WixAssert.CompareLineByLine(new[]
             {
                 "[Converted] The namespace 'http://schemas.microsoft.com/wix/2006/wi' is out of date. It must be 'http://wixtoolset.org/schemas/v4/wxs'. (XmlnsValueWrong)",
-                "[Converted] The namespace 'http://schemas.microsoft.com/wix/FirewallExtension' is out of date. It must be 'http://wixtoolset.org/schemas/v4/wxs/firewall'. (XmlnsValueWrong)",
+                "[Converted] The namespace 'http://schemas.microsoft.com/wix/FirewallExtension' is out of date. It must be 'http://minfos.com.au/schemas/v4/wxs/firewall'. (XmlnsValueWrong)",
                 "[Converted] Using RemoteAddress element text is deprecated. Use the 'Value' attribute instead. (InnerTextDeprecated)",
-                "[Converted] Namespace should be defined on the root. The 'http://wixtoolset.org/schemas/v4/wxs/firewall' namespace was move to the root element. (MoveNamespacesToRoot)"
+                "[Converted] Namespace should be defined on the root. The 'http://minfos.com.au/schemas/v4/wxs/firewall' namespace was move to the root element. (MoveNamespacesToRoot)"
             }, messaging.Messages.Select(m => m.ToString()).ToArray());
             Assert.Equal(4, errors);
 

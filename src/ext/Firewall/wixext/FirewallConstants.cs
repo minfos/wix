@@ -6,7 +6,7 @@ namespace WixToolset.Firewall
 
     static class FirewallConstants
     {
-        internal static readonly XNamespace Namespace = "http://wixtoolset.org/schemas/v4/wxs/firewall";
+        internal static readonly XNamespace Namespace = "http://minfos.com.au/schemas/v4/wxs/firewall";
         internal static readonly XName FirewallExceptionName = Namespace + "FirewallException";
         internal static readonly XName RemoteAddressName = Namespace + "RemoteAddress";
 

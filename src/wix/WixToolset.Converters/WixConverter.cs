@@ -51,7 +51,7 @@ namespace WixToolset.Converters
         private static readonly XNamespace WixBalNamespace = "http://wixtoolset.org/schemas/v4/wxs/bal";
         private static readonly XNamespace WixDependencyNamespace = "http://wixtoolset.org/schemas/v4/wxs/dependency";
         private static readonly XNamespace WixDirectXNamespace = "http://wixtoolset.org/schemas/v4/wxs/directx";
-        private static readonly XNamespace WixFirewallNamespace = "http://wixtoolset.org/schemas/v4/wxs/firewall";
+        private static readonly XNamespace WixFirewallNamespace = "http://minfos.com.au/schemas/v4/wxs/firewall";
         private static readonly XNamespace WixIisNamespace = "http://wixtoolset.org/schemas/v4/wxs/iis";
         private static readonly XNamespace WixUiNamespace = "http://wixtoolset.org/schemas/v4/wxs/ui";
         private static readonly XNamespace WixUtilNamespace = "http://wixtoolset.org/schemas/v4/wxs/util";
@@ -2730,7 +2730,7 @@ namespace WixToolset.Converters
                     baseNamespace = "directx";
                     break;
 
-                case "http://wixtoolset.org/schemas/v4/wxs/firewall":
+                case "http://minfos.com.au/schemas/v4/wxs/firewall":
                     baseNamespace = "fw";
                     break;
 
